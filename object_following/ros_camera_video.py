@@ -1,5 +1,6 @@
 import os, sys
-lib_path = "/home/bhavana*/.local/lib/python2.7/site-packages"
+# lib_path = "/home/bhavana*/.local/lib/python2.7/site-packages"
+lib_path = "/home/dev/.local/lib/python2.7/site-packages"
 if os.path.exists(lib_path):
     sys.path.insert(0, lib_path)
 
@@ -39,7 +40,8 @@ class object_tracker:
                 "mil": cv2.TrackerMIL_create,
                 "tld": cv2.TrackerTLD_create,
                 "medianflow": cv2.TrackerMedianFlow_create,
-                "mosse": cv2.TrackerMOSSE_create
+                "mosse": cv2.TrackerMOSSE_create,
+                "goturn": cv2.TrackerGOTURN_create
             }
             self.tracker = OPENCV_OBJECT_TRACKERS[tracker_type]()
         self.initBB = None

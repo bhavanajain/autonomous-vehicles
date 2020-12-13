@@ -1,0 +1,8 @@
+Download the bagfiles from the following link:
+https://tinyurl.com/maavbagfiles
+
+If the above does not work, try the original link:
+https://drive.google.com/drive/folders/1v02FehUIf-oIW6jJVO42DsyfEuLMZiAm?usp=sharing
+
+Following link contains starter tutorials on interacting with ROS bag files:
+https://wiki.ros.org/rosbag/Tutorials
