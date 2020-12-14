@@ -30,7 +30,7 @@ def run(source=0, dispLoc=False):
         break
         
     # points = get_points.run(img) 
-    # points[0] = [26, 73, 94, 208]
+    # points = [[40, 85, 85, 180]]
     points = [[x, y, (x+w), (y+h)]]
 
     tracker = dlib.correlation_tracker()
