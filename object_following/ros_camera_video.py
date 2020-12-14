@@ -1,5 +1,6 @@
 import os, sys
-lib_path = "/home/bhavana*/.local/lib/python2.7/site-packages"
+# lib_path = "/home/bhavana*/.local/lib/python2.7/site-packages"
+lib_path = "/home/dev/.local/lib/python2.7/site-packages"
 if os.path.exists(lib_path):
     sys.path.insert(0, lib_path)
 
@@ -13,10 +14,14 @@ import cv2
 import time
 from cv_bridge import CvBridge, CvBridgeError
 from sensor_msgs.msg import Image
+from pacmod_msgs.msg import PositionWithSpeed
 from std_msgs.msg import Bool
 import rospy
 import roslib
+from steer_pid_controller import steer_pid_controller
 
+steer_pub = rospy.Publisher("/pacmod/as_rx/steer_cmd", PositionWithSpeed, queue_size=1)
+steer_cmd = PositionWithSpeed()
 
 class object_tracker:
     def __init__(self, tracker_type):
@@ -39,7 +44,8 @@ class object_tracker:
                 "mil": cv2.TrackerMIL_create,
                 "tld": cv2.TrackerTLD_create,
                 "medianflow": cv2.TrackerMedianFlow_create,
-                "mosse": cv2.TrackerMOSSE_create
+                "mosse": cv2.TrackerMOSSE_create,
+                "goturn": cv2.TrackerGOTURN_create
             }
             self.tracker = OPENCV_OBJECT_TRACKERS[tracker_type]()
         self.initBB = None
@@ -56,6 +62,7 @@ class object_tracker:
                     (x, y, w, h) = [int(v) for v in box]
                     cv2.rectangle(frame, (x, y), (x + w, y + h),
                                   (0, 255, 0), 2)
+                    self.steer.steer_control(x+w/2)
                 self.fps.update()
                 self.fps.stop()
                 info = [
@@ -78,6 +85,7 @@ class object_tracker:
                                             showCrosshair=True)
                 self.tracker.init(frame, self.initBB)
                 self.fps = FPS().start()
+                self.steer = steer_pid_controller(init_BB[0] + init_BB[3]/2)
 
             # if the `q` key was pressed, break from the loop
             elif key == ord("q"):
