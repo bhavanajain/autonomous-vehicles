@@ -93,3 +93,7 @@ if __name__ == "__main__":
     args = vars(parser.parse_args())
 
     run(args["videoFile"], args["dispLoc"])
+
+
+### dependencies: pip install imutils dlib cv2
+### run command: python tracker_dlib.py --videoFile ../data/sample_pedestrian.mp4 --dispLoc
