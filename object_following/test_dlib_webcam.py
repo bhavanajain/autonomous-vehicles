@@ -4,20 +4,21 @@ lib_path = "/home/bhavana*/.local/lib/python2.7/site-packages"
 if os.path.exists(lib_path):
     sys.path.insert(0, lib_path)
 
-import cv2
-import time
-import imutils
-import argparse
-from imutils.video import FPS
-from imutils.video import VideoStream
 import dlib
+from imutils.video import VideoStream
+from imutils.video import FPS
+import argparse
+import imutils
+import time
+import cv2
+
 
 # construct the argument parser and parse the arguments
 parser = argparse.ArgumentParser()
 parser.add_argument("-v", "--video", type=str,
-                help="path to input video file")
+                    help="path to input video file")
 parser.add_argument("-t", "--tracker", type=str, default="kcf",
-                help="OpenCV object tracker type")
+                    help="OpenCV object tracker type")
 args = vars(parser.parse_args())
 
 tracker = dlib.correlation_tracker()
@@ -65,7 +66,7 @@ while True:
         x1, y1 = int(bbox.left()), int(bbox.top())
         x2, y2 = int(bbox.right()), int(bbox.bottom())
         cv2.rectangle(frame, (x1, y1), (x2, y2),
-                          (0, 255, 0), 2)
+                      (0, 255, 0), 2)
         # update the FPS counter
         fps.update()
         fps.stop()
@@ -73,7 +74,7 @@ while True:
         # the frame
         info = [
             ("Tracker", args["tracker"]),
-            ("Area", "{:.2f}".format((x2-x1)*(y2-y1))),
+            ("Area", "{:.2f}".format((x2 - x1) * (y2 - y1))),
             ("FPS", "{:.2f}".format(fps.fps())),
         ]
         # loop over the info tuples and draw them on our frame
@@ -96,14 +97,14 @@ while True:
         # coordinates, then start the FPS throughput estimator as well
         # tracker.init(frame, initBB)
         x, y, w, h = initBB
-        points = [[x, y, (x+w), (y+h)]]
+        points = [[x, y, (x + w), (y + h)]]
         tracker.start_track(frame, dlib.rectangle(*points[0]))
         fps = FPS().start()
 
     # if the `q` key was pressed, break from the loop
     elif key == ord("q"):
         break
-        
+
 # if we are using a webcam, release the pointer
 if not args.get("video", False):
     vs.stop()

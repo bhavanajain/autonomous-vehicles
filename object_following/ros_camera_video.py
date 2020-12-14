@@ -1,53 +1,44 @@
-import os, sys
+import os
+import sys
 # lib_path = "/home/bhavana*/.local/lib/python2.7/site-packages"
 lib_path = "/home/dev/.local/lib/python2.7/site-packages"
 if os.path.exists(lib_path):
     sys.path.insert(0, lib_path)
 
-import argparse
-from imutils.video import FPS
-from imutils.video import VideoStream
-import imutils
-import numpy as np
-from imutils import paths
-import cv2
-import time
-from cv_bridge import CvBridge, CvBridgeError
-from sensor_msgs.msg import Image
-from pacmod_msgs.msg import PositionWithSpeed
-from std_msgs.msg import Bool
-import rospy
-import roslib
+import dlib
 from steer_pid_controller import steer_pid_controller
+import roslib
+import rospy
+from std_msgs.msg import Bool
+from pacmod_msgs.msg import PositionWithSpeed
+from sensor_msgs.msg import Image
+from cv_bridge import CvBridge, CvBridgeError
+import time
+import cv2
+from imutils import paths
+import numpy as np
+import imutils
+from imutils.video import VideoStream
+from imutils.video import FPS
+import argparse
 
-steer_pub = rospy.Publisher("/pacmod/as_rx/steer_cmd", PositionWithSpeed, queue_size=1)
+
+steer_pub = rospy.Publisher(
+    "/pacmod/as_rx/steer_cmd",
+    PositionWithSpeed,
+    queue_size=1)
 steer_cmd = PositionWithSpeed()
 
+
 class object_tracker:
-    def __init__(self, tracker_type):
+    def __init__(self):
         self.bridge = CvBridge()
         # subscribe to the camera feed
         self.image_sub = rospy.Subscriber(
             "/mako_1/mako_1/image_raw", Image, self.callback
         )
-        self.tracker_type = tracker_type
 
-        # define tracker object based on cv version and tracker type
-        (major, minor) = cv2.__version__.split(".")[:2]
-        if int(major) == 3 and int(minor) < 3:
-            self.tracker = cv2.Tracker_create(tracker_type.upper())
-        else:
-            OPENCV_OBJECT_TRACKERS = {
-                "csrt": cv2.TrackerCSRT_create,
-                "kcf": cv2.TrackerKCF_create,
-                "boosting": cv2.TrackerBoosting_create,
-                "mil": cv2.TrackerMIL_create,
-                "tld": cv2.TrackerTLD_create,
-                "medianflow": cv2.TrackerMedianFlow_create,
-                "mosse": cv2.TrackerMOSSE_create,
-                "goturn": cv2.TrackerGOTURN_create
-            }
-            self.tracker = OPENCV_OBJECT_TRACKERS[tracker_type]()
+        self.tracker = dlib.correlation_tracker()
         self.initBB = None
 
     def callback(self, data):
@@ -57,17 +48,17 @@ class object_tracker:
             (H, W) = frame.shape[:2]
 
             if self.initBB is not None:
-                (success, box) = self.tracker.update(frame)
-                if success:
-                    (x, y, w, h) = [int(v) for v in box]
-                    cv2.rectangle(frame, (x, y), (x + w, y + h),
-                                  (0, 255, 0), 2)
-                    self.steer.steer_control(x+w/2)
+                self.tracker.update(frame)
+                bbox = self.tracker.get_position()
+                x1, y1 = int(bbox.left()), int(bbox.top())
+                x2, y2 = int(bbox.right()), int(bbox.bottom())
+                cv2.rectangle(frame, (x1, y1), (x2, y2),
+                              (0, 255, 0), 2)
+                self.steer.steer_control((x1 + x2) / 2)
                 self.fps.update()
                 self.fps.stop()
                 info = [
-                    ("Tracker", self.tracker_type),
-                    ("Success", "Yes" if success else "No"),
+                    ("Area", "{:.2f}".format((x2 - x1) * (y2 - y1))),
                     ("FPS", "{:.2f}".format(self.fps.fps())),
                 ]
                 for (i, (k, v)) in enumerate(info):
@@ -81,11 +72,16 @@ class object_tracker:
             # if the 's' key is selected, we are going to "select" a bounding
             # box to track
             if key == ord("s"):
-                self.initBB = cv2.selectROI("ROS Camera Feed", frame, fromCenter=False,
-                                            showCrosshair=True)
-                self.tracker.init(frame, self.initBB)
+                self.initBB = cv2.selectROI(
+                    "ROS Camera Feed", frame, fromCenter=False, showCrosshair=True)
+                # self.tracker.init(frame, self.initBB)
+                # tracker.init(frame, initBB)
+                x, y, w, h = self.initBB
+                points = [x, y, (x + w), (y + h)]
+                self.tracker.start_track(frame, dlib.rectangle(*points))
                 self.fps = FPS().start()
-                self.steer = steer_pid_controller(init_BB[0] + init_BB[3]/2)
+                desired_x = x + (w / 2)
+                self.steer = steer_pid_controller(desired_x)
 
             # if the `q` key was pressed, break from the loop
             elif key == ord("q"):
@@ -94,14 +90,8 @@ class object_tracker:
         except CvBridgeError as e:
             print(e)
 
-
-parser = argparse.ArgumentParser()
-parser.add_argument("-t", "--tracker", type=str, default="kcf",
-                help="OpenCV object tracker type")
-args = vars(parser.parse_args())
-
 rospy.init_node("object_tracker", anonymous=True)
-ic = object_tracker(args["tracker"])
+ic = object_tracker()
 
 try:
     rospy.spin()

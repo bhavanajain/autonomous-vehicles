@@ -11,7 +11,8 @@ frame_height = int(capture.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
 # Define the codec and create VideoWriter object
 fourcc = cv2.VideoWriter_fourcc(*"XVID")
-video_writer = cv2.VideoWriter("output.avi", fourcc, 20, (frame_width, frame_height))
+video_writer = cv2.VideoWriter(
+    "output.avi", fourcc, 20, (frame_width, frame_height))
 
 while True:
     has_frame, frame = capture.read()

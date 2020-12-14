@@ -4,20 +4,19 @@ lib_path = "/home/bhavana*/.local/lib/python2.7/site-packages"
 if os.path.exists(lib_path):
     sys.path.insert(0, lib_path)
 
-import cv2
-import time
-import imutils
-import argparse
-from imutils.video import FPS
 from imutils.video import VideoStream
-
+from imutils.video import FPS
+import argparse
+import imutils
+import time
+import cv2
 
 # construct the argument parser and parse the arguments
 parser = argparse.ArgumentParser()
 parser.add_argument("-v", "--video", type=str,
-                help="path to input video file")
+                    help="path to input video file")
 parser.add_argument("-t", "--tracker", type=str, default="kcf",
-                help="OpenCV object tracker type")
+                    help="OpenCV object tracker type")
 args = vars(parser.parse_args())
 
 # extract the OpenCV version info
@@ -118,7 +117,7 @@ while True:
     # if the `q` key was pressed, break from the loop
     elif key == ord("q"):
         break
-        
+
 # if we are using a webcam, release the pointer
 if not args.get("video", False):
     vs.stop()

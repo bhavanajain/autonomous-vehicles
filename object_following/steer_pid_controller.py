@@ -1,17 +1,44 @@
-steer_pub = rospy.Publisher("/pacmod/as_rx/steer_cmd", PositionWithSpeed, queue_size=1)
+import os
+import sys
+# lib_path = "/home/bhavana*/.local/lib/python2.7/site-packages"
+lib_path = "/home/dev/.local/lib/python2.7/site-packages"
+if os.path.exists(lib_path):
+    sys.path.insert(0, lib_path)
+
+import roslib
+import rospy
+from std_msgs.msg import Bool
+from pacmod_msgs.msg import PositionWithSpeed
+from sensor_msgs.msg import Image
+from cv_bridge import CvBridge, CvBridgeError
+import time
+import cv2
+from imutils import paths
+import numpy as np
+import imutils
+from imutils.video import VideoStream
+from imutils.video import FPS
+import argparse
+
+
+steer_pub = rospy.Publisher(
+    "/pacmod/as_rx/steer_cmd",
+    PositionWithSpeed,
+    queue_size=1)
 steer_cmd = PositionWithSpeed()
+
 
 class steer_pid_controller:
     def __init__(
         self,
-        p=0.0,
+        desired_x,
+        p=0.1,
         i=0.0,
         d=0.0,
         wg=20.0,
         avl=2.5,
-        max_steering_angle=0.8,
-        max_steering_angle=-0.8,
-        desired_x
+        max_steering_angle=2.5,
+        min_steering_angle=-2.5,
     ):
         self.kp = p
         self.ki = i
@@ -35,6 +62,7 @@ class steer_pid_controller:
 
     def steer_control(self, curr_x):
         global steer_cmd
+        steer_flag = True
         if steer_flag:
             current_time = time.time()
             delta_time = current_time - self.prev_time
@@ -61,7 +89,8 @@ class steer_pid_controller:
                 + self.ki * self.iterm
             )
 
-            output = max(min(output, self.max_steering_angle), self.min_steering_angle)
+            output = max(min(output, self.max_steering_angle),
+                         self.min_steering_angle)
             output = np.pi * output
 
             steer_cmd.angular_position = output
