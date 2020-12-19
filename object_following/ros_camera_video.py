@@ -9,8 +9,8 @@ import dlib
 from steer_pid_controller import steer_pid_controller
 import roslib
 import rospy
-from std_msgs.msg import Bool
-from pacmod_msgs.msg import PositionWithSpeed
+from std_msgs.msg import Bool, String, Float32, Float64
+from pacmod_msgs.msg import PositionWithSpeed, PacmodCmd
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge, CvBridgeError
 import time
@@ -21,13 +21,53 @@ import imutils
 from imutils.video import VideoStream
 from imutils.video import FPS
 import argparse
+from pynput.keyboard import Key, Listener, KeyCode
 
+steer_pub = rospy.Publisher("/pacmod/as_rx/steer_cmd", PositionWithSpeed, queue_size=1)
+gear_pub = rospy.Publisher("/pacmod/as_rx/shift_cmd", PacmodCmd, queue_size=1)
+enable_pub = rospy.Publisher("/pacmod/as_rx/enable", Bool, queue_size=1)
+accel_pub = rospy.Publisher("/pacmod/as_rx/accel_cmd", PacmodCmd, queue_size=1)
+brake_pub = rospy.Publisher("/pacmod/as_rx/brake_cmd", PacmodCmd, queue_size=1)
 
-steer_pub = rospy.Publisher(
-    "/pacmod/as_rx/steer_cmd",
-    PositionWithSpeed,
-    queue_size=1)
+enabled = False
+accel_flag = False
+gear_cmd = PacmodCmd()
+accel_cmd = PacmodCmd()
+brake_cmd = PacmodCmd()
 steer_cmd = PositionWithSpeed()
+
+rospy.init_node("object_tracker", anonymous=True)
+
+def on_press(key):
+    global enabled
+    global gear_cmd
+    global accel_cmd
+    global brake_cmd
+    global accel_flag
+
+    if key == KeyCode.from_char("p"):
+        print("ENGAGED")
+        enabled = True
+        accel_cmd.enable = True
+        accel_cmd.clear = False
+        accel_cmd.ignore = False
+        brake_cmd.enable = True
+        brake_cmd.clear = False
+        brake_cmd.ignore = False
+        accel_cmd.f64_cmd = 0.0
+        brake_cmd.f64_cmd = 0.0
+        gear_cmd.ui16_cmd = 3
+
+    enable_pub.publish(Bool(enabled))
+    gear_pub.publish(gear_cmd)
+    brake_pub.publish(brake_cmd)
+
+
+
+enable_pub.publish(Bool(enabled))
+listener = Listener(on_press=on_press)
+listener.start()
+
 
 
 class object_tracker:
@@ -54,11 +94,12 @@ class object_tracker:
                 x2, y2 = int(bbox.right()), int(bbox.bottom())
                 cv2.rectangle(frame, (x1, y1), (x2, y2),
                               (0, 255, 0), 2)
+                self.steer.speed_control(y2-y1)
                 self.steer.steer_control((x1 + x2) / 2)
                 self.fps.update()
                 self.fps.stop()
                 info = [
-                    ("Area", "{:.2f}".format((x2 - x1) * (y2 - y1))),
+                    ("Height", "{:.2f}".format((y2 - y1))),
                     ("FPS", "{:.2f}".format(self.fps.fps())),
                 ]
                 for (i, (k, v)) in enumerate(info):
@@ -81,7 +122,8 @@ class object_tracker:
                 self.tracker.start_track(frame, dlib.rectangle(*points))
                 self.fps = FPS().start()
                 desired_x = x + (w / 2)
-                self.steer = steer_pid_controller(desired_x)
+                desired_y = h
+                self.steer = steer_pid_controller(desired_x, desired_y)
 
             # if the `q` key was pressed, break from the loop
             elif key == ord("q"):
@@ -90,7 +132,6 @@ class object_tracker:
         except CvBridgeError as e:
             print(e)
 
-rospy.init_node("object_tracker", anonymous=True)
 ic = object_tracker()
 
 try:
