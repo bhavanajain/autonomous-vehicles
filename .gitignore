@@ -130,3 +130,6 @@ dmypy.json
 
 # goturn files
 goturn*
+
+# OSX 
+.DS_Store
