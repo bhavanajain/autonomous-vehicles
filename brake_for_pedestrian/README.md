@@ -1,4 +1,4 @@
-Brake for Pedestrian
+# Brake for Pedestrian
 
 In this challenge, the AV is programmed to brake upon seeing a pedestrian in the camera frame. 
 
